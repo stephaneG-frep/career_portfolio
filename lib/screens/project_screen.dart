@@ -121,6 +121,7 @@ class ProjectScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'project_add_fab',
         onPressed: () => _edit(context, null),
         icon: const Icon(Icons.add),
         label: const Text('Projet'),

@@ -77,6 +77,7 @@ class SkillScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'skill_add_fab',
         onPressed: () => _openDialog(context, null),
         icon: const Icon(Icons.add),
         label: const Text('Compétence'),

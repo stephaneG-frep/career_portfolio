@@ -39,6 +39,7 @@ class ExperienceScreen extends StatelessWidget {
         ),
         floatingActionButton: Builder(
           builder: (context) => FloatingActionButton.extended(
+            heroTag: 'experience_add_fab',
             onPressed: () {
               if (DefaultTabController.of(context).index == 0) {
                 _openDialog(context, null);

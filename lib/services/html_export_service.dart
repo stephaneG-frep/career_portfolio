@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/education.dart';
 import '../models/experience.dart';
@@ -11,7 +11,7 @@ import '../models/project.dart';
 import '../models/skill.dart';
 
 class HtmlExportService {
-  Future<void> export({
+  Future<String?> export({
     required Profile profile,
     required List<Skill> skills,
     required List<PortfolioProject> projects,
@@ -52,8 +52,18 @@ class HtmlExportService {
     archive.addFile(ArchiveFile('index.html', htmlBytes.length, htmlBytes));
     archive.addFile(ArchiveFile('assets/.keep', 0, Uint8List(0)));
     final zip = Uint8List.fromList(ZipEncoder().encode(archive));
-    await FileSaver.instance.saveFile(
-      name: 'career_portfolio_html',
+    const filename = 'career_portfolio_html';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return FileSaver.instance.saveAs(
+        name: filename,
+        bytes: zip,
+        fileExtension: 'zip',
+        mimeType: MimeType.zip,
+      );
+    }
+
+    return FileSaver.instance.saveFile(
+      name: filename,
       bytes: zip,
       fileExtension: 'zip',
       mimeType: MimeType.zip,

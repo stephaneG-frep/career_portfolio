@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -50,6 +50,13 @@ class PdfExportService {
     final navy = PdfColor.fromHex('#071B33');
     final cyan = PdfColor.fromHex('#00A8C6');
     final muted = PdfColor.fromHex('#667085');
+    final regularFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/DejaVuSans.ttf'),
+    );
+    final boldFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/DejaVuSans-Bold.ttf'),
+    );
+    final pdfTheme = pw.ThemeData.withFont(base: regularFont, bold: boldFont);
     pw.MemoryImage? photo;
     if (profile.photoBase64 != null) {
       photo = pw.MemoryImage(base64Decode(profile.photoBase64!));
@@ -58,6 +65,7 @@ class PdfExportService {
     document.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        theme: pdfTheme,
         build: (_) => pw.Container(
           color: navy,
           padding: const pw.EdgeInsets.all(52),
@@ -101,10 +109,10 @@ class PdfExportService {
               ),
               pw.Spacer(),
               pw.Text(
-                [
-                  profile.city,
-                  profile.email,
-                ].where((value) => value.isNotEmpty).join('  •  '),
+                [profile.city, profile.email]
+                    .where((value) => value.isNotEmpty)
+                    .map(_pdfText)
+                    .join('  -  '),
                 style: const pw.TextStyle(color: PdfColors.white, fontSize: 10),
               ),
             ],
@@ -116,6 +124,7 @@ class PdfExportService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        theme: pdfTheme,
         margin: const pw.EdgeInsets.all(42),
         header: (_) => pw.Align(
           alignment: pw.Alignment.centerRight,
@@ -133,7 +142,11 @@ class PdfExportService {
         ),
         build: (_) => [
           _heading('Profil', navy, cyan),
-          pw.Text(profile.longBio.isEmpty ? profile.shortBio : profile.longBio),
+          pw.Text(
+            _pdfText(
+              profile.longBio.isEmpty ? profile.shortBio : profile.longBio,
+            ),
+          ),
           pw.SizedBox(height: 22),
           _heading('Compétences', navy, cyan),
           pw.Wrap(
@@ -151,7 +164,7 @@ class PdfExportService {
                       borderRadius: pw.BorderRadius.circular(5),
                     ),
                     child: pw.Text(
-                      '${skill.name} — ${skill.level.label}',
+                      _pdfText('${skill.name} - ${skill.level.label}'),
                       style: pw.TextStyle(color: navy, fontSize: 10),
                     ),
                   ),
@@ -162,23 +175,13 @@ class PdfExportService {
           _heading('Projets principaux', navy, cyan),
           ...projects
               .take(6)
-              .map(
-                (project) => _entry(
-                  project.name,
-                  '${project.status.label} • ${project.technologies.join(', ')}',
-                  project.detailedDescription.isEmpty
-                      ? project.shortDescription
-                      : project.detailedDescription,
-                  navy,
-                  muted,
-                ),
-              ),
+              .map((project) => _projectEntry(project, navy, muted)),
           pw.SizedBox(height: 16),
           _heading('Expériences', navy, cyan),
           ...experiences.map(
             (item) => _entry(
               item.position,
-              '${item.company} • ${item.type.label}',
+              '${item.company} - ${item.type.label}',
               item.description,
               navy,
               muted,
@@ -189,8 +192,8 @@ class PdfExportService {
           ...education.map(
             (item) => _entry(
               item.name,
-              '${item.organization} • ${item.date.year}'
-              '${item.duration.isEmpty ? '' : ' • ${item.duration}'}',
+              '${item.organization} - ${item.date.year}'
+              '${item.duration.isEmpty ? '' : ' - ${item.duration}'}',
               item.notes,
               navy,
               muted,
@@ -221,7 +224,7 @@ class PdfExportService {
         pw.Container(width: 5, height: 20, color: accent),
         pw.SizedBox(width: 9),
         pw.Text(
-          text,
+          _pdfText(text),
           style: pw.TextStyle(
             color: navy,
             fontSize: 19,
@@ -244,19 +247,146 @@ class PdfExportService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          title,
+          _pdfText(title),
           style: pw.TextStyle(
             color: navy,
             fontSize: 13,
             fontWeight: pw.FontWeight.bold,
           ),
         ),
-        pw.Text(subtitle, style: pw.TextStyle(color: muted, fontSize: 9)),
+        pw.Text(
+          _pdfText(subtitle),
+          style: pw.TextStyle(color: muted, fontSize: 9),
+        ),
         if (description.isNotEmpty) ...[
           pw.SizedBox(height: 4),
-          pw.Text(description, style: const pw.TextStyle(fontSize: 10)),
+          pw.Text(
+            _pdfText(description),
+            style: const pw.TextStyle(fontSize: 10),
+          ),
         ],
       ],
     ),
   );
+
+  pw.Widget _projectEntry(
+    PortfolioProject project,
+    PdfColor navy,
+    PdfColor muted,
+  ) {
+    final images = _projectImages(project);
+    final technologies = project.technologies.join(', ');
+    final subtitle = technologies.isEmpty
+        ? project.status.label
+        : '${project.status.label} - $technologies';
+    final description = project.detailedDescription.isEmpty
+        ? project.shortDescription
+        : project.detailedDescription;
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 18),
+      child: pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColor.fromHex('#E4E7EC')),
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        padding: const pw.EdgeInsets.all(12),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (images.isNotEmpty) ...[
+              _projectGallery(images),
+              pw.SizedBox(height: 10),
+            ],
+            pw.Text(
+              _pdfText(project.name),
+              style: pw.TextStyle(
+                color: navy,
+                fontSize: 13,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.Text(
+              _pdfText(subtitle),
+              style: pw.TextStyle(color: muted, fontSize: 9),
+            ),
+            if (description.isNotEmpty) ...[
+              pw.SizedBox(height: 4),
+              pw.Text(
+                _pdfText(description),
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _projectGallery(List<pw.MemoryImage> images) {
+    final firstImage = images.first;
+    final otherImages = images.skip(1).toList();
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _projectImageFrame(
+          firstImage,
+          height: 180,
+          width: PdfPageFormat.a4.availableWidth,
+        ),
+        if (otherImages.isNotEmpty) ...[
+          pw.SizedBox(height: 8),
+          pw.Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: otherImages
+                .map(
+                  (image) => _projectImageFrame(image, height: 125, width: 235),
+                )
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  pw.Widget _projectImageFrame(
+    pw.MemoryImage image, {
+    required double height,
+    required double width,
+  }) => pw.ClipRRect(
+    horizontalRadius: 6,
+    verticalRadius: 6,
+    child: pw.Container(
+      height: height,
+      width: width,
+      color: PdfColor.fromHex('#F8FAFC'),
+      padding: const pw.EdgeInsets.all(4),
+      child: pw.Image(image, fit: pw.BoxFit.contain),
+    ),
+  );
+
+  List<pw.MemoryImage> _projectImages(PortfolioProject project) => project
+      .imageBase64List
+      .map((imageBase64) {
+        try {
+          return pw.MemoryImage(base64Decode(imageBase64));
+        } on FormatException {
+          return null;
+        }
+      })
+      .whereType<pw.MemoryImage>()
+      .toList();
+
+  String _pdfText(String value) => value
+      .replaceAll('•', '-')
+      .replaceAll('—', '-')
+      .replaceAll('–', '-')
+      .replaceAll('…', '...')
+      .replaceAll('“', '"')
+      .replaceAll('”', '"')
+      .replaceAll('‘', "'")
+      .replaceAll('’', "'")
+      .replaceAll(RegExp(r'[\u{1F300}-\u{1FAFF}]', unicode: true), '');
 }

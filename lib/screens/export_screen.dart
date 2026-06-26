@@ -131,13 +131,28 @@ class _ExportScreenState extends State<ExportScreen> {
           education: education,
         );
       } else {
-        await HtmlExportService().export(
+        final htmlPath = await HtmlExportService().export(
           profile: profile,
           skills: skills,
           projects: projects,
           experiences: experiences,
           education: education,
         );
+        if (htmlPath == null && mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Export HTML annulé.')));
+          return;
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Archive HTML créée : $htmlPath'),
+              duration: const Duration(seconds: 8),
+            ),
+          );
+        }
+        return;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

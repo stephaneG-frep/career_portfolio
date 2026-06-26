@@ -53,19 +53,27 @@ class PortfolioPreviewScreen extends StatelessWidget {
                     context,
                     'Projets',
                     LayoutBuilder(
-                      builder: (context, constraints) => GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: projects.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: constraints.maxWidth > 720 ? 2 : 1,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          mainAxisExtent: 350,
-                        ),
-                        itemBuilder: (_, index) =>
-                            ProjectCard(project: projects[index]),
-                      ),
+                      builder: (context, constraints) {
+                        final cardWidth = constraints.maxWidth > 720
+                            ? (constraints.maxWidth - 16) / 2
+                            : constraints.maxWidth;
+                        return Wrap(
+                          spacing: 16,
+                          runSpacing: 16,
+                          children: projects
+                              .map(
+                                (project) => SizedBox(
+                                  width: cardWidth,
+                                  child: ProjectCard(
+                                    project: project,
+                                    maxVisibleTechnologies: 4,
+                                    showImageGallery: true,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
                     ),
                   ),
                   _section(
