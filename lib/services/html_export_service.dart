@@ -106,7 +106,9 @@ class HtmlExportService {
     h1{font-size:clamp(2.3rem,6vw,4.5rem);line-height:1;margin:0 0 14px}header h2{color:#72def1;margin:0 0 18px;font-weight:500}
     main{padding:55px 0}section{margin-bottom:54px}h2{color:var(--navy);font-size:1.8rem}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 12px 35px #071b330d}
-    .card img{width:100%;aspect-ratio:16/8;object-fit:cover;border-radius:12px}.tags{display:flex;flex-wrap:wrap;gap:8px}.tag{background:#e8f7fa;color:#075467;padding:5px 10px;border-radius:999px;font-size:.88rem}
+    .project-gallery{display:grid;gap:10px;margin-bottom:18px}.project-gallery img{width:100%;height:auto;max-height:320px;object-fit:contain;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:6px}
+    .project-thumbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.project-thumbs img{max-height:130px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px}.tag{background:#e8f7fa;color:#075467;padding:5px 10px;border-radius:999px;font-size:.88rem}
     .timeline{border-left:3px solid var(--cyan);padding-left:24px}.timeline article{margin-bottom:28px}.muted{color:var(--muted)}
     footer{background:var(--navy);color:#fff;padding:42px 0}.links{display:flex;flex-wrap:wrap;gap:18px}
     @media(max-width:700px){.hero{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}header{padding:55px 0}.avatar{width:110px;height:110px}}
@@ -122,8 +124,9 @@ class HtmlExportService {
   <section><h2>Compétences</h2><div class="tags">${skills.map((s) => '<span class="tag">${e(s.name)} · ${e(s.level.label)}</span>').join()}</div></section>
   <section><h2>Projets</h2><div class="grid">${projects.asMap().entries.map((entry) {
       final p = entry.value;
-      final image = assets['project_${entry.key}_0'];
-      return '<article class="card">${image == null ? '' : '<img src="$image" alt="${e(p.name)}">'}<h3>${e(p.name)}</h3><p class="muted">${e(p.status.label)}</p><p>${e(p.shortDescription)}</p><div class="tags">${p.technologies.map((t) => '<span class="tag">${e(t)}</span>').join()}</div><p>${link(p.githubUrl, 'Code source')} ${link(p.demoUrl, 'Démonstration')}</p></article>';
+      final images = List.generate(p.imageBase64List.length, (index) => assets['project_${entry.key}_$index']).whereType<String>().toList();
+      final gallery = images.isEmpty ? '' : '<div class="project-gallery"><img src="${images.first}" alt="${e(p.name)} - capture 1">${images.length == 1 ? '' : '<div class="project-thumbs">${images.skip(1).toList().asMap().entries.map((imageEntry) => '<img src="${imageEntry.value}" alt="${e(p.name)} - capture ${imageEntry.key + 2}">').join()}</div>'}</div>';
+      return '<article class="card">$gallery<h3>${e(p.name)}</h3><p class="muted">${e(p.status.label)}</p><p>${e(p.shortDescription)}</p><div class="tags">${p.technologies.map((t) => '<span class="tag">${e(t)}</span>').join()}</div><p>${link(p.githubUrl, 'Code source')} ${link(p.demoUrl, 'Démonstration')}</p></article>';
     }).join()}</div></section>
   <section><h2>Expériences</h2><div class="timeline">${experiences.map((x) => '<article><h3>${e(x.position)}</h3><div class="muted">${e(x.company)} · ${x.startDate.year} — ${x.endDate?.year ?? 'Aujourd’hui'}</div><p>${e(x.description)}</p></article>').join()}</div></section>
   <section><h2>Formations & certifications</h2><div class="grid">${education.map((x) => '<article class="card"><h3>${e(x.name)}</h3><div class="muted">${e(x.organization)} · ${x.date.year}</div><p>${e(x.notes)}</p></article>').join()}</div></section>
